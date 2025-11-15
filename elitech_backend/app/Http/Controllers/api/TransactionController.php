@@ -107,8 +107,15 @@ class TransactionController extends Controller
     return response()->json($items);
     }
 
-    public function exportCsv()
+    public function exportCsv(Request $request)
     {
+        if ($request->has('token')) {
+        $user = \Laravel\Sanctum\PersonalAccessToken::findToken($request->token);
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+    }
     $filename = "laporan_stok_" . date('YmdHis') . ".csv";
 
     $items = Item::all();
@@ -116,8 +123,12 @@ class TransactionController extends Controller
     $content = "Kode,Nama,Stok Masuk,Stok Keluar,Stok Akhir\n";
 
     foreach ($items as $item) {
-        $stokMasuk = Transaction::where('item_id', $item->id)->where('type', 'in')->sum('qty');
-        $stokKeluar = Transaction::where('item_id', $item->id)->where('type', 'out')->sum('qty');
+        $stokMasuk = Transaction::where('item_id', $item->id)
+            ->where('type', 'in')
+            ->sum('qty');
+        $stokKeluar = Transaction::where('item_id', $item->id)
+            ->where('type', 'out')
+            ->sum('qty');
 
         $content .= "{$item->kode},{$item->nama},{$stokMasuk},{$stokKeluar},{$item->stok}\n";
     }
@@ -125,7 +136,7 @@ class TransactionController extends Controller
     return response($content)
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', "attachment; filename={$filename}");
-}
+    }
 
 public function dashboardSummary()
 {
